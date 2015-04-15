@@ -216,6 +216,19 @@ local function GetPMUInfo(pmu)
 	return info;
 end
 
+-- 
+-- Given a string name, lookup the numerical PMU source to match
+-- if not found, then return false
+--
+local function PMUTypeFromName(name)
+	for idx=ffi.C.PMU_NONE, ffi.C.PFM_PMU_MAX do
+		if name == rawget(EventSources, idx) then
+			return idx;
+		end
+	end
+
+	return false
+end
 
 
 export.GetErrorString = GetErrorString;
