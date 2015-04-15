@@ -193,6 +193,16 @@ local EventSources = {
 }
 export.EventSources = EventSources;
 
+local PMUTypes = {
+	[ffi.C.PFM_PMU_TYPE_UNKNOWN] = "PFM_PMU_TYPE_UNKNOWN";	-- unknown PMU type
+	[ffi.C.PFM_PMU_TYPE_CORE] = "PFM_PMU_TYPE_CORE";	-- processor core PMU
+	[ffi.C.PFM_PMU_TYPE_UNCORE] = "PFM_PMU_TYPE_UNCORE";	-- processor socket-level PMU
+	[ffi.C.PFM_PMU_TYPE_OS_GENERIC] = "PFM_PMU_TYPE_OS_GENERIC"; -- generic OS-provided PMU
+	[ffi.C.PFM_PMU_TYPE_MAX]= "PFM_PMU_TYPE_MAX"; 
+}
+export.PMUTypes = PMUTypes;
+
+
 local function GetErrorString(code)
 	local errorStr = export.ffi.Lib.pfm_strerror(code);
 	if errorStr ~= nil then
@@ -212,8 +222,22 @@ local function GetPMUInfo(pmu)
 	if err ~= 0 then
 		return false,export.GetErrorString(err);
 	end
-
-	return info;
+	
+	local res = {
+		name = ffi.string(info[0].name);
+		desc = ffi.string(info[0].desc);
+		pmu = EventSources[tonumber(info[0].pmu)];
+		["type"] = PMUTypes[tonumber(info[0].type)];
+		nevents = info[0].nevents;
+		first_event = info[0].first_event;
+		max_encoding = info[0].max_encoding;
+		num_cntrs = info[0].num_cntrs;
+		num_fixed_cntrs = info[0].num_fixed_cntrs;
+		is_present = info[0].flags.is_present;
+		is_dfl = info[0].flags.is_dfl;		
+	};
+	
+	return res;
 end
 
 -- 
