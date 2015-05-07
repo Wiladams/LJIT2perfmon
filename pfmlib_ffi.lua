@@ -32,9 +32,7 @@
 local ffi = require("ffi")
 local export = {}
 
-if ffi.os == "Linux" then
-	export.Lib = ffi.load("libpfm.so");
-end
+
 
 
 
@@ -446,46 +444,69 @@ ffi.cdef[[
 int pfm_get_event_next(int idx);
 int pfm_find_event(const char *str);
 pfm_err_t pfm_get_event_info(int idx, pfm_os_t os, pfm_event_info_t *output);
-]]
 
-ffi.cdef[[
 pfm_err_t pfm_get_os_event_encoding(const char *str, int dfl_plm, pfm_os_t os, void *args);
 pfm_err_t pfm_get_event_attr_info(int eidx, int aidx, pfm_os_t os, pfm_event_attr_info_t *output);
 //pfm_err_t pfm_pmu_validate(pfm_pmu_t pmu_id, FILE *fp);
-//pfm_err_t pfm_get_event_encoding(const char *str, int dfl_plm, char **fstr, int *idx, uint64_t **codes, int *count);
+pfm_err_t pfm_get_event_encoding(const char *str, int dfl_plm, char **fstr, int *idx, uint64_t **codes, int *count);
 ]]
 
+ffi.cdef[[
+/*
+ * use with PFM_OS_PERF, PFM_OS_PERF_EXT for pfm_get_os_event_encoding()
+ */
+typedef struct {
+	struct perf_event_attr *attr;	/* in/out: perf_event struct pointer */
+	char **fstr;			/* out/in: fully qualified event string */
+	size_t size;			/* sizeof struct */
+	int idx;			/* out: opaque event identifier */
+	int cpu;			/* out: cpu to program, -1 = not set */
+	int flags;			/* out: perf_event_open() flags */
+	int pad0;			/* explicit 64-bit mode padding */
+} pfm_perf_encode_arg_t;
+]]
+
+--[[
+#if __WORDSIZE == 64
+#define PFM_PERF_ENCODE_ABI0	40	/* includes 4-byte padding */
+#else
+#define PFM_PERF_ENCODE_ABI0	28
+#endif
+--]]
+
+ffi.cdef[[
+/*
+ * old interface, maintained for backward compatibility with older versions o
+ * the library. Should use pfm_get_os_event_encoding() now
+ */
+pfm_err_t pfm_get_perf_event_encoding(const char *str,
+					     int dfl_plm,
+					     struct perf_event_attr *output,
+					     char **fstr,
+					     int *idx);
+]]
 
 -- error codes
 
-export.PFM_SUCCES			= 0;	--/* success */
-export.PPFM_ERR_NOTSUPP		= -1;	--/* function not supported */
-export.PPFM_ERR_INVAL		= -2;	--/* invalid parameters */
-export.PPFM_ERR_NOINIT		= -3;	--/* library was not initialized */
-export.PPFM_ERR_NOTFOUND	= -4;	--/* event not found */
-export.PPFM_ERR_FEATCOMB	= -5;	--/* invalid combination of features */
-export.PPFM_ERR_UMASK	 	= -6;	--/* invalid or missing unit mask */
-export.PPFM_ERR_NOMEM	 	= -7;	--/* out of memory */
-export.PPFM_ERR_ATTR		= -8;	--* invalid event attribute */
-export.PPFM_ERR_ATTR_VAL	= -9;	--/* invalid event attribute value */
-export.PPFM_ERR_ATTR_SET	= -10;	--/* attribute value already set */
-export.PPFM_ERR_TOOMANY		= -11;	--/* too many parameters */
-export.PPFM_ERR_TOOSMALL	= -12;	--/* parameter is too small */
+export.PFM_SUCCESS			= 0;	--/* success */
+export.PFM_ERR_NOTSUPP		= -1;	--/* function not supported */
+export.PFM_ERR_INVAL		= -2;	--/* invalid parameters */
+export.PFM_ERR_NOINIT		= -3;	--/* library was not initialized */
+export.PFM_ERR_NOTFOUND	= -4;	--/* event not found */
+export.PFM_ERR_FEATCOMB	= -5;	--/* invalid combination of features */
+export.PFM_ERR_UMASK	 	= -6;	--/* invalid or missing unit mask */
+export.PFM_ERR_NOMEM	 	= -7;	--/* out of memory */
+export.PFM_ERR_ATTR		= -8;	--* invalid event attribute */
+export.PFM_ERR_ATTR_VAL	= -9;	--/* invalid event attribute value */
+export.PFM_ERR_ATTR_SET	= -10;	--/* attribute value already set */
+export.PFM_ERR_TOOMANY		= -11;	--/* too many parameters */
+export.PFM_ERR_TOOSMALL	= -12;	--/* parameter is too small */
 
---[[
-/*
- * event, attribute iterators
- * must be used because no guarante indexes are contiguous
- *
- * for pmu, simply iterate over pfm_pmu_t enum and use
- * pfm_get_pmu_info() and the is_present field
- */
-#define pfm_for_each_event_attr(x, z) \
-	for((x)=0; (x) < (z)->nattrs; (x) = (x)+1)
 
-#define pfm_for_all_pmus(x) \
-	for((x)= 0 ; (x) < PFM_PMU_MAX; (x)++)
---]]
+
+if ffi.os == "Linux" then
+	export.Lib = ffi.load("libpfm.so");
+end
 
 -- initialize the library so it's ready to use
 if export.Lib then

@@ -1,6 +1,12 @@
+package.path = package.path..";".."../?.lua"
+
 local ffi = require("ffi")
 local pfm = require("pfmlib");
+local common = require("test_common")
 
+
+
+common.printDict("==== pfmlib Dict ====", pfm)
 print("pfm VERSION: ",pfm.GetVersion());
 
 local function listEventSources()

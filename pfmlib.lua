@@ -1,9 +1,17 @@
 local ffi = require("ffi")
 local pfm_ffi = require("pfmlib_ffi");
 
+local function appendDict(dst, src)
+	--print("==== appendDict ====", dst, src)
+	for k,v in pairs(src) do
+		dst[k] = v;
+	end
+	return dst;
+end
 
 local export= {}
-export.ffi = pfm_ffi;
+appendDict(export, pfm_ffi);
+
 
 local EventSources = {
 	[ffi.C.PFM_PMU_NONE] = "PFM_PMU_NONE",							-- no PMU 
@@ -202,9 +210,15 @@ local PMUTypes = {
 }
 export.PMUTypes = PMUTypes;
 
+local ControlSources={
+	[ffi.C.PFM_ATTR_CTRL_UNKNOWN] = "???",
+	[ffi.C.PFM_ATTR_CTRL_PMU] = "PMU",
+	[ffi.C.PFM_ATTR_CTRL_PERF_EVENT] = "perf_event",
+}
+export.ControlSources = ControlSources;
 
 local function GetErrorString(code)
-	local errorStr = export.ffi.Lib.pfm_strerror(code);
+	local errorStr = pfm_ffi.Lib.pfm_strerror(code);
 	if errorStr ~= nil then
 		return ffi.string(errorStr);
 	end
@@ -213,12 +227,17 @@ local function GetErrorString(code)
 end
 
 local function GetVersion()
-	return export.ffi.Lib.pfm_get_version();
+	return pfm_ffi.Lib.pfm_get_version();
 end
 
+--[[
 local function GetPMUInfo(pmu)
+	if not pmu then
+		return nil;
+	end
+	
 	local info = ffi.new("pfm_pmu_info_t[1]");
-	local err = export.ffi.Lib.pfm_get_pmu_info(pmu, info);
+	local err = pfm_ffi.Lib.pfm_get_pmu_info(pmu, info);
 	if err ~= 0 then
 		return false,export.GetErrorString(err);
 	end
@@ -239,12 +258,13 @@ local function GetPMUInfo(pmu)
 	
 	return res;
 end
+--]]
 
 -- 
 -- Given a string name, lookup the numerical PMU source to match
 -- if not found, then return false
 --
-local function PMUTypeFromName(name)
+local function PMUIDFromName(name)
 	for idx=ffi.C.PMU_NONE, ffi.C.PFM_PMU_MAX do
 		if name == rawget(EventSources, idx) then
 			return idx;
@@ -257,6 +277,7 @@ end
 
 export.GetErrorString = GetErrorString;
 export.GetVersion = GetVersion;
-export.GetPMUInfo = GetPMUInfo;
+export.PMUIDFromName = PMUIDFromName;
+export.PMUTypes = PMUTypes;
 
 return export
